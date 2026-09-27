@@ -17,7 +17,6 @@ from services.weather_service import get_weather_service
 from services.clubbed_prediction_service import ClubbedEnsemblePredictor
 from services.explainability_service import get_explainability_service, build_background_from_csv
 from services.counterfactual_service import get_counterfactual_service
-from services.chatbot_service import get_chatbot_service
 
 
 # This is the shared column order used by the XAI services.  The regional
@@ -159,7 +158,10 @@ def load_xai_services(crop_names):
     background = build_background_from_csv(
         "Crop_recommendation.csv",
         feature_columns=XAI_FEATURE_ORDER,
-        sample_size=75,
+        # Kernel SHAP scales with both this background size and nsamples.
+        # Eight real training rows keep the interactive explanation responsive
+        # for the slower dual-stream ensemble while retaining data grounding.
+        sample_size=8,
     )
     explain_service = get_explainability_service(
         XAI_FEATURE_ORDER, list(crop_names), background
@@ -170,19 +172,12 @@ def load_xai_services(crop_names):
     return explain_service, counterfactual_service
 
 
-@st.cache_resource
-def load_chatbot():
-    """Create one reusable Groq client, with GROQ_API_KEY read from .env."""
-    return get_chatbot_service(
-        provider="groq",
-        groq_api_key=os.getenv("GROQ_API_KEY"),
-        groq_model="llama-3.3-70b-versatile",
-    )
-
 # Initialize Regional Stats Service & Weather Service
 reg_service = load_regional_service()
 weather_service = load_weather_service()
-chatbot = load_chatbot()
+
+# Chatbot is intentionally disabled for now so SHAP and counterfactual
+# explanation generation remain the primary, responsive path.
 
 # ==========================================
 # 3. Streamlit Page Configuration
@@ -751,7 +746,7 @@ if st.button("🚀 Generate Data-Backed Recommendation", type="primary", use_con
         with st.expander("🧠 Why this crop? (SHAP explanation)", expanded=True):
             try:
                 explanation = explain_svc.explain(
-                    predict_fn, current_x, target_crop=top_rec["crop"]
+                    predict_fn, current_x, target_crop=top_rec["crop"], nsamples=24
                 )
                 st.write(explanation["natural_language_summary"])
                 st.dataframe(pd.DataFrame(explanation["contributions"]), use_container_width=True)
@@ -763,7 +758,7 @@ if st.button("🚀 Generate Data-Backed Recommendation", type="primary", use_con
             with st.expander(f"Why not {alternative['crop'].title()}?"):
                 try:
                     rejection = explain_svc.explain_rejection(
-                        predict_fn, current_x, top_rec["crop"], alternative["crop"]
+                        predict_fn, current_x, top_rec["crop"], alternative["crop"], nsamples=24
                     )
                     st.write(rejection["natural_language_summary"])
 
@@ -795,51 +790,12 @@ if st.button("🚀 Generate Data-Backed Recommendation", type="primary", use_con
                 "Check the sidebar mapping-health indicator if you see mostly 🟡 badges."
             )
 
-# Sidebar chatbot: rendering it here preserves the existing sidebar settings
-# order while keeping the main page focused on recommendations and analytics.
-if "chat_messages" not in st.session_state:
-    st.session_state["chat_messages"] = []
-
-# Ground chat in the most recent recommendation the app actually produced.
-app_context = None
-if "last_recommendation" in st.session_state:
-    rec = st.session_state["last_recommendation"]
-    app_context = {
-        "District": district_val,
-        "Recommended Crop": f"{rec['crop']} ({rec['ml_confidence']:.1f}% match)",
-        "Recommended Fertilizer": rec.get("fertilizer", "N/A"),
-        "Regional plausibility": rec.get("plausibility_badge", "N/A"),
-    }
+# Chatbot features are temporarily disabled so XAI decision support remains
+# the dominant and most responsive workflow in the app.
 
 with st.sidebar:
     st.markdown("---")
-    st.subheader("💬 KrushiDaata Sahayak")
-    st.caption("Ask about crops, fertilizers, schemes, or your latest recommendation.")
-
-    for msg in st.session_state["chat_messages"][-8:]:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    user_q = st.chat_input("Ask KrushiDaata Sahayak...", key="sidebar_chat_input")
-    if user_q:
-        st.session_state["chat_messages"].append({"role": "user", "content": user_q})
-        with st.chat_message("user"):
-            st.write(user_q)
-
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                result = chatbot.chat(
-                    user_q,
-                    chat_history=st.session_state["chat_messages"][:-1],
-                    app_context=app_context,
-                )
-            if result["success"]:
-                st.write(result["reply"])
-                st.session_state["chat_messages"].append(
-                    {"role": "assistant", "content": result["reply"]}
-                )
-            else:
-                st.error(result["error"])
+    st.caption("AI guidance panel disabled temporarily while SHAP and counterfactual analysis are being prioritized.")
 
 # Footer
 st.markdown("---")

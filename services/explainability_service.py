@@ -48,6 +48,10 @@ class ExplainabilityService:
         # Cache one KernelExplainer per predict_fn (keyed by id) so repeated
         # calls for the same active model don't rebuild it every time.
         self._explainer_cache: Dict[int, "shap.KernelExplainer"] = {}
+        # Kernel SHAP returns attributions for every crop class in one call.
+        # Retain that result for this input so explaining the winner and then
+        # comparing alternatives does not re-run the same expensive sampling.
+        self._shap_values_cache: Dict[tuple, Any] = {}
 
     def _get_explainer(self, predict_fn: Callable[[np.ndarray], np.ndarray]) -> "shap.KernelExplainer":
         key = id(predict_fn)
@@ -60,7 +64,7 @@ class ExplainabilityService:
         predict_fn: Callable[[np.ndarray], np.ndarray],
         feature_vector: np.ndarray,
         target_crop: str,
-        nsamples: int = 100,
+        nsamples: int = 24,
     ) -> Dict[str, Any]:
         """
         Returns per-feature SHAP contribution toward `target_crop`'s predicted
@@ -74,7 +78,12 @@ class ExplainabilityService:
         x = feature_vector.reshape(1, -1).astype(float)
         crop_idx = self.crop_names.index(target_crop)
 
-        raw_shap = explainer.shap_values(x, nsamples=nsamples)
+        cache_key = (id(predict_fn), tuple(x.ravel()), nsamples)
+        if cache_key not in self._shap_values_cache:
+            self._shap_values_cache[cache_key] = explainer.shap_values(
+                x, nsamples=nsamples
+            )
+        raw_shap = self._shap_values_cache[cache_key]
         values = self._extract_class_values(raw_shap, crop_idx)
 
         total_abs = float(np.sum(np.abs(values))) or 1e-9
@@ -100,7 +109,7 @@ class ExplainabilityService:
         feature_vector: np.ndarray,
         chosen_crop: str,
         rejected_crop: str,
-        nsamples: int = 100,
+        nsamples: int = 24,
     ) -> Dict[str, Any]:
         """
         "Why not X?" -- compares each feature's SHAP contribution toward the
