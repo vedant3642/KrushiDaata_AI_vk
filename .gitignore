@@ -1,0 +1,31 @@
+# Environment files
+.env
+.env.*
+
+# Python virtual environment
+venv/
+.venv/
+ENV/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Model artifacts and large ML outputs
+saved_models_2/
+saved_models_clubbed/
+saved_gan_models/
+*.keras
+*.pt
+*.pth
+*.bin
+*.h5
+*.onnx
+
+# Jupyter / editor artifacts
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+

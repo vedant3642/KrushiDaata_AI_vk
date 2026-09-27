@@ -1,0 +1,92 @@
+{
+    "metric_name": "Regional Sanity & Historical Area Share Alignment Rate",
+    "total_test_samples": 4513,
+    "regional_alignment_rate_gt_5_pct": 48.33,
+    "regional_plausibility_rate_gt_2_pct": 55.55,
+    "yield_stability_rate_cv_lt_35_pct": 69.18,
+    "district_breakdown": {
+        "Kolhapur": {
+            "total": 1430,
+            "aligned_gt_5": 159,
+            "aligned_gt_2": 243,
+            "crops_recommended": {
+                "Sugarcane": 72,
+                "Jowar": 72,
+                "Cotton": 480,
+                "Rice": 39,
+                "Wheat": 438,
+                "Maize": 176,
+                "Groundnut": 48,
+                "Tur": 27,
+                "Urad": 27,
+                "Moong": 27,
+                "Gram": 12,
+                "Masoor": 12
+            }
+        },
+        "Pune": {
+            "total": 479,
+            "aligned_gt_5": 402,
+            "aligned_gt_2": 429,
+            "crops_recommended": {
+                "Rice": 45,
+                "Urad": 32,
+                "Jowar": 40,
+                "Tur": 18,
+                "Wheat": 45,
+                "Groundnut": 27,
+                "Gram": 27,
+                "Sugarcane": 245
+            }
+        },
+        "Sangli": {
+            "total": 897,
+            "aligned_gt_5": 475,
+            "aligned_gt_2": 627,
+            "crops_recommended": {
+                "Sugarcane": 175,
+                "Grapes": 125,
+                "Maize": 175,
+                "Wheat": 125,
+                "Jowar": 125,
+                "Groundnut": 27,
+                "Turmeric": 28,
+                "Cotton": 45,
+                "Tur": 45,
+                "Moong": 27
+            }
+        },
+        "Satara": {
+            "total": 1000,
+            "aligned_gt_5": 818,
+            "aligned_gt_2": 830,
+            "crops_recommended": {
+                "Tur": 18,
+                "Gram": 12,
+                "Rice": 225,
+                "Jowar": 125,
+                "Sugarcane": 343,
+                "Ginger": 125,
+                "Turmeric": 27,
+                "Wheat": 125
+            }
+        },
+        "Solapur": {
+            "total": 707,
+            "aligned_gt_5": 327,
+            "aligned_gt_2": 378,
+            "crops_recommended": {
+                "Cotton": 125,
+                "Jowar": 27,
+                "Wheat": 125,
+                "Sugarcane": 175,
+                "Groundnut": 69,
+                "Gram": 33,
+                "Soybean": 45,
+                "Tur": 18,
+                "Urad": 45,
+                "Moong": 45
+            }
+        }
+    }
+}

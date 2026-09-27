@@ -1,0 +1,9 @@
+streamlit
+torch
+tensorflow
+numpy
+pandas
+scikit-learn
+shap
+requests
+python-dotenv
