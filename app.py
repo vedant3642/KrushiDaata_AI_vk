@@ -17,6 +17,7 @@ from services.weather_service import get_weather_service
 from services.clubbed_prediction_service import ClubbedEnsemblePredictor
 from services.explainability_service import get_explainability_service, build_background_from_csv
 from services.counterfactual_service import get_counterfactual_service
+from services.chatbot_service import get_chatbot_service
 
 
 # This is the shared column order used by the XAI services.  The regional
@@ -172,12 +173,21 @@ def load_xai_services(crop_names):
     return explain_service, counterfactual_service
 
 
+@st.cache_resource
+def load_chatbot():
+    """Create one reusable Groq chatbot client using the .env API key."""
+    return get_chatbot_service(
+        provider="groq",
+        groq_api_key=os.getenv("GROQ_API_KEY"),
+        # Selected from the models currently available to this Groq key.
+        groq_model="openai/gpt-oss-20b",
+    )
+
+
 # Initialize Regional Stats Service & Weather Service
 reg_service = load_regional_service()
 weather_service = load_weather_service()
-
-# Chatbot is intentionally disabled for now so SHAP and counterfactual
-# explanation generation remain the primary, responsive path.
+chatbot = load_chatbot()
 
 # ==========================================
 # 3. Streamlit Page Configuration
@@ -790,12 +800,50 @@ if st.button("🚀 Generate Data-Backed Recommendation", type="primary", use_con
                 "Check the sidebar mapping-health indicator if you see mostly 🟡 badges."
             )
 
-# Chatbot features are temporarily disabled so XAI decision support remains
-# the dominant and most responsive workflow in the app.
+# The sidebar keeps chat available without taking space from the analytical
+# recommendation view. Chat reruns do not re-run SHAP/counterfactual analysis.
+if "chat_messages" not in st.session_state:
+    st.session_state["chat_messages"] = []
+
+app_context = None
+if "last_recommendation" in st.session_state:
+    rec = st.session_state["last_recommendation"]
+    app_context = {
+        "District": district_val,
+        "Recommended Crop": f"{rec['crop']} ({rec['ml_confidence']:.1f}% match)",
+        "Recommended Fertilizer": rec.get("fertilizer", "N/A"),
+        "Regional plausibility": rec.get("plausibility_badge", "N/A"),
+    }
 
 with st.sidebar:
     st.markdown("---")
-    st.caption("AI guidance panel disabled temporarily while SHAP and counterfactual analysis are being prioritized.")
+    st.subheader("💬 KrushiDaata Sahayak")
+    st.caption("Ask about crops, fertilizers, schemes, or your latest recommendation.")
+
+    for msg in st.session_state["chat_messages"][-8:]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    user_q = st.chat_input("Ask KrushiDaata Sahayak...", key="sidebar_chat_input")
+    if user_q:
+        st.session_state["chat_messages"].append({"role": "user", "content": user_q})
+        with st.chat_message("user"):
+            st.write(user_q)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                result = chatbot.chat(
+                    user_q,
+                    chat_history=st.session_state["chat_messages"][:-1],
+                    app_context=app_context,
+                )
+            if result["success"]:
+                st.write(result["reply"])
+                st.session_state["chat_messages"].append(
+                    {"role": "assistant", "content": result["reply"]}
+                )
+            else:
+                st.error(result["error"])
 
 # Footer
 st.markdown("---")

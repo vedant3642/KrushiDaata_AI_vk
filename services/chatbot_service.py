@@ -90,13 +90,14 @@ class AgriChatbotService:
         self,
         provider: str = "groq",
         groq_api_key: Optional[str] = None,
-        groq_model: str = "llama-3.3-70b-versatile",
+        groq_model: str = "openai/gpt-oss-20b",
         ollama_model: str = "llama3.2:3b",
         ollama_host: str = "http://localhost:11434",
         temperature: float = 0.3,
         max_tokens: int = 600,
         max_history_turns: int = 6,
-        request_timeout: int = 20,
+        # Cold starts can exceed 20 seconds even when the model is healthy.
+        request_timeout: int = 60,
     ):
         self.provider = provider.lower()
         self.groq_api_key = groq_api_key or os.environ.get("GROQ_API_KEY")
